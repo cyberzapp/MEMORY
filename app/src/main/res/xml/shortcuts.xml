@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- "Hey Google, ask MEMORY to remember this" -->
+    <capability android:name="custom.actions.intent.CAPTURE_MEMORY">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.example.memory"
+            android:targetClass="com.example.memory.MainActivity">
+        </intent>
+    </capability>
+
+    <!-- "Hey Google, ask MEMORY where I put my laptop" -->
+    <capability android:name="custom.actions.intent.SEARCH_MEMORY">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.example.memory"
+            android:targetClass="com.example.memory.MainActivity">
+            <parameter
+                android:name="query"
+                android:key="query" />
+        </intent>
+    </capability>
+
+</shortcuts>
