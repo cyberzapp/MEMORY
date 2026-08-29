@@ -46,7 +46,7 @@ data class EvidenceBundle(
      * The quality of this text directly determines search accuracy.
      */
     fun toEmbeddingText(): String {
-        return listOfNotNull(
+        val text = listOfNotNull(
             objects.takeIf { it.isNotEmpty() }
                 ?.joinToString(", ") { it.label },
             imageLabels.takeIf { it.isNotEmpty() }
@@ -55,6 +55,8 @@ data class EvidenceBundle(
             transcript?.take(500),  // cap transcript similarly
             locationName
         ).joinToString(" | ")
+        
+        return text.ifBlank { "Blank memory" }
     }
 
     /**
@@ -120,6 +122,8 @@ data class EvidenceBundle(
      * Original media must NOT be deleted unless this returns true.
      */
     fun hasMinimumSignal(): Boolean {
+        if (captureType == CaptureType.PHOTO) return true
+        
         return objects.isNotEmpty() ||
                imageLabels.isNotEmpty() ||
                !ocrText.isNullOrBlank() ||

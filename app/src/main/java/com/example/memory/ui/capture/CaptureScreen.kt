@@ -1,5 +1,6 @@
 package com.example.memory.ui.capture
 
+import android.annotation.SuppressLint
 import android.Manifest
 import android.content.Context
 import android.graphics.Bitmap
@@ -164,6 +165,7 @@ class CaptureViewModel(
         return file
     }
 
+    @SuppressLint("MissingPermission")
     private suspend fun getCurrentLocation(): Triple<Double, Double, String?>? {
         return try {
             val fusedClient = LocationServices.getFusedLocationProviderClient(appContext)
@@ -289,39 +291,88 @@ fun CaptureScreen(
 
             Spacer(Modifier.height(12.dp))
 
-            // Capture button
-            Box(
-                modifier = Modifier
-                    .size(80.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary)
-                    .border(4.dp, MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.3f), CircleShape)
-                    .clickable {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        imageCapture?.let { ic ->
-                            ic.takePicture(
-                                java.util.concurrent.Executors.newSingleThreadExecutor(),
-                                object : ImageCapture.OnImageCapturedCallback() {
-                                    override fun onCaptureSuccess(image: ImageProxy) {
-                                        val bitmap = image.toBitmap()
-                                        viewModel.capturePhoto(bitmap)
-                                        image.close()
-                                    }
-                                    override fun onError(exception: ImageCaptureException) {
-                                        Log.e("CaptureScreen", "Photo capture failed", exception)
-                                    }
-                                }
-                            )
-                        }
-                    },
-                contentAlignment = Alignment.Center
+            val speechLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+                contract = androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+            ) { result ->
+                if (result.resultCode == android.app.Activity.RESULT_OK) {
+                    val data = result.data
+                    val results = data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)
+                    val spokenText = results?.get(0)
+                    if (!spokenText.isNullOrBlank()) {
+                        viewModel.captureVoice(spokenText)
+                    }
+                }
+            }
+
+            // Capture buttons
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(
-                    Icons.Filled.CameraAlt,
-                    contentDescription = "Capture",
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(36.dp)
-                )
+                // Voice Button
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.secondaryContainer)
+                        .clickable {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            try {
+                                val intent = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                                    putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                                }
+                                speechLauncher.launch(intent)
+                            } catch (e: Exception) {
+                                viewModel.captureVoice("Voice capture not supported on this device.")
+                            }
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        androidx.compose.material.icons.Icons.Filled.Mic,
+                        contentDescription = "Record Voice",
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+                
+                Spacer(Modifier.width(24.dp))
+                
+                // Photo Button
+                Box(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary)
+                        .border(4.dp, MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.3f), CircleShape)
+                        .clickable {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            imageCapture?.let { ic ->
+                                ic.takePicture(
+                                    java.util.concurrent.Executors.newSingleThreadExecutor(),
+                                    object : ImageCapture.OnImageCapturedCallback() {
+                                        override fun onCaptureSuccess(image: ImageProxy) {
+                                            val bitmap = image.toBitmap()
+                                            viewModel.capturePhoto(bitmap)
+                                            image.close()
+                                        }
+                                        override fun onError(exception: ImageCaptureException) {
+                                            Log.e("CaptureScreen", "Photo capture failed", exception)
+                                        }
+                                    }
+                                )
+                            }
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Filled.CameraAlt,
+                        contentDescription = "Capture",
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
             }
 
             Spacer(Modifier.height(16.dp))

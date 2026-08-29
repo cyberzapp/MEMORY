@@ -18,6 +18,8 @@ import com.example.memory.ui.search.SearchScreen
 import com.example.memory.ui.search.SearchViewModel
 import com.example.memory.ui.timeline.TimelineScreen
 import com.example.memory.ui.timeline.TimelineViewModel
+import com.example.memory.ui.detail.MemoryDetailScreen
+import com.example.memory.ui.detail.MemoryDetailViewModel
 
 @Composable
 fun MainNavigation() {
@@ -58,7 +60,7 @@ fun MainNavigation() {
                     onNavigateBack = { backStack.removeLastOrNull() },
                     onNavigateToSearch = { backStack.add(SearchRoute) },
                     onMemoryClick = { memoryId ->
-                        // TODO: Navigate to MemoryDetailRoute
+                        backStack.add(MemoryDetailRoute(memoryId))
                     },
                     modifier = Modifier.safeDrawingPadding()
                 )
@@ -76,8 +78,23 @@ fun MainNavigation() {
                     viewModel = viewModel,
                     onNavigateBack = { backStack.removeLastOrNull() },
                     onMemoryClick = { memoryId ->
-                        // TODO: Navigate to MemoryDetailRoute
+                        backStack.add(MemoryDetailRoute(memoryId))
                     },
+                    modifier = Modifier.safeDrawingPadding()
+                )
+            }
+            
+            entry<MemoryDetailRoute> { route ->
+                val viewModel: MemoryDetailViewModel = viewModel(
+                    factory = object : ViewModelProvider.Factory {
+                        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                            return MemoryDetailViewModel(route.memoryId, appContainer.memoryRepository) as T
+                        }
+                    }
+                )
+                MemoryDetailScreen(
+                    viewModel = viewModel,
+                    onNavigateBack = { backStack.removeLastOrNull() },
                     modifier = Modifier.safeDrawingPadding()
                 )
             }
