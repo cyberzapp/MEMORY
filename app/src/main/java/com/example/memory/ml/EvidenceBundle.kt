@@ -35,6 +35,24 @@ data class EvidenceBundle(
     // === Capture metadata ===
     val captureType: CaptureType
 ) {
+    companion object {
+        /**
+         * Labels ML Kit frequently returns that add NO memory value.
+         * These are body parts (from the user's hand holding the phone),
+         * generic textures/shapes, and overly broad categories.
+         */
+        private val NOISE_LABELS = setOf(
+            "Flesh", "Skin", "Eyelash", "Nail", "Finger", "Thumb", "Hand",
+            "Lip", "Jaw", "Cheek", "Forehead", "Eyebrow", "Chin", "Ear",
+            "Neck", "Wrist", "Elbow", "Knee", "Gesture",
+            "Pattern", "Rectangle", "Triangle", "Circle", "Line",
+            "Font", "Tints and shades", "Material property", "Symmetry",
+            "Electric blue", "Magenta", "Terrestrial plant"
+        )
+
+        fun isUsefulLabel(label: String): Boolean = label !in NOISE_LABELS
+    }
+
     /**
      * Flattened text representation for the embedding model.
      * Combines all textual signals into a single string that
@@ -46,10 +64,13 @@ data class EvidenceBundle(
      * The quality of this text directly determines search accuracy.
      */
     fun toEmbeddingText(): String {
+        val filteredLabels = imageLabels.filter { isUsefulLabel(it.text) }
+        val filteredObjects = objects.filter { it.label != "Object" }
+
         val text = listOfNotNull(
-            objects.takeIf { it.isNotEmpty() }
+            filteredObjects.takeIf { it.isNotEmpty() }
                 ?.joinToString(", ") { it.label },
-            imageLabels.takeIf { it.isNotEmpty() }
+            filteredLabels.takeIf { it.isNotEmpty() }
                 ?.joinToString(", ") { it.text },
             ocrText?.take(500),     // cap OCR for embedding quality
             transcript?.take(500),  // cap transcript similarly
@@ -95,10 +116,11 @@ data class EvidenceBundle(
      */
     fun fallbackSummary(): String {
         return buildString {
+            // Filter out noise labels (body parts, textures, shapes)
+            val usefulLabels = imageLabels.filter { isUsefulLabel(it.text) }
             // Prioritize Image Labels (400+ categories) over Object Detection (only 5 categories)
-            // Image labels give much better results: "Book, Desk, Laptop" vs "Home goods"
-            if (imageLabels.isNotEmpty()) {
-                append(imageLabels.take(4).joinToString(", ") { it.text })
+            if (usefulLabels.isNotEmpty()) {
+                append(usefulLabels.take(4).joinToString(", ") { it.text })
             }
             // Add specific object detection labels only if they add info
             val meaningfulObjects = objects.filter { it.label != "Object" }

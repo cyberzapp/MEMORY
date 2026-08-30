@@ -4,9 +4,6 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
 import com.google.mlkit.vision.common.InputImage
-import com.google.mlkit.vision.objects.ObjectDetection
-import com.google.mlkit.vision.objects.ObjectDetector
-import com.google.mlkit.vision.objects.defaults.ObjectDetectorOptions
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.TextRecognizer
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
@@ -48,15 +45,6 @@ class ImageAnalyzer(context: Context) {
     private val textRecognizer: TextRecognizer =
         TextRecognition.getClient(TextRecognizerOptions.Builder().build())
 
-    private val objectDetector: ObjectDetector =
-        ObjectDetection.getClient(
-            ObjectDetectorOptions.Builder()
-                .setDetectorMode(ObjectDetectorOptions.SINGLE_IMAGE_MODE)
-                .enableMultipleObjects()
-                .enableClassification()
-                .build()
-        )
-
     // Lower threshold to capture more labels — we filter by quality later
     private val imageLabeler: ImageLabeler =
         ImageLabeling.getClient(
@@ -66,7 +54,7 @@ class ImageAnalyzer(context: Context) {
         )
 
     /**
-     * Analyze a photo with all three ML Kit models in parallel.
+     * Analyze a photo with ML Kit models in parallel.
      *
      * @param bitmap The captured photo
      * @return VisionResult containing all extracted signals
@@ -74,21 +62,18 @@ class ImageAnalyzer(context: Context) {
     suspend fun analyze(bitmap: Bitmap): VisionResult = coroutineScope {
         val inputImage = InputImage.fromBitmap(bitmap, 0)
 
-        // Run all three in parallel
+        // Run in parallel
         val ocrDeferred = async { runTextRecognition(inputImage) }
-        val objectsDeferred = async { runObjectDetection(inputImage) }
         val labelsDeferred = async { runImageLabeling(inputImage) }
 
         val ocrResult = ocrDeferred.await()
-        val objectsResult = objectsDeferred.await()
         val labelsResult = labelsDeferred.await()
 
-        Log.i(TAG, "Analysis complete: ${objectsResult.size} objects, ${labelsResult.size} labels, OCR=${ocrResult.fullText?.take(50)}")
-        Log.i(TAG, "Objects: ${objectsResult.map { "${it.label}(${(it.confidence * 100).toInt()}%)" }}")
+        Log.i(TAG, "Analysis complete: ${labelsResult.size} labels, OCR=${ocrResult.fullText?.take(50)}")
         Log.i(TAG, "Labels: ${labelsResult.map { "${it.text}(${(it.confidence * 100).toInt()}%)" }}")
 
         VisionResult(
-            detectedObjects = objectsResult,
+            detectedObjects = emptyList(), // Removed base ObjectDetector as it only has 5 generic categories
             ocrText = ocrResult.fullText,
             ocrBlocks = ocrResult.blocks,
             imageLabels = labelsResult
@@ -115,29 +100,6 @@ class ImageAnalyzer(context: Context) {
         }
     }
 
-    private suspend fun runObjectDetection(image: InputImage): List<DetectedObjectInfo> {
-        return try {
-            val results = objectDetector.process(image).await()
-            // ML Kit base model only has 5 categories: Fashion, Food, Home goods, Places, Plants
-            // Only keep labels the model is confident about
-            results.flatMap { detectedObject ->
-                detectedObject.labels
-                    .filter { it.confidence >= 0.5f }
-                    .map { label ->
-                        DetectedObjectInfo(
-                            label = label.text,
-                            confidence = label.confidence,
-                            boundingBox = detectedObject.boundingBox,
-                            trackingId = detectedObject.trackingId
-                        )
-                    }
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Object detection failed", e)
-            emptyList()
-        }
-    }
-
     private suspend fun runImageLabeling(image: InputImage): List<ImageLabelInfo> {
         return try {
             val results = imageLabeler.process(image).await()
@@ -158,7 +120,6 @@ class ImageAnalyzer(context: Context) {
 
     fun close() {
         textRecognizer.close()
-        objectDetector.close()
         imageLabeler.close()
     }
 }

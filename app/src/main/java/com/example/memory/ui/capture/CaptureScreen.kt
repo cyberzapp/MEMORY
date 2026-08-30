@@ -354,7 +354,14 @@ fun CaptureScreen(
                                     object : ImageCapture.OnImageCapturedCallback() {
                                         override fun onCaptureSuccess(image: ImageProxy) {
                                             val bitmap = image.toBitmap()
-                                            viewModel.capturePhoto(bitmap)
+                                            val rotation = image.imageInfo.rotationDegrees
+                                            val finalBitmap = if (rotation != 0) {
+                                                val matrix = android.graphics.Matrix().apply { postRotate(rotation.toFloat()) }
+                                                android.graphics.Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+                                            } else {
+                                                bitmap
+                                            }
+                                            viewModel.capturePhoto(finalBitmap)
                                             image.close()
                                         }
                                         override fun onError(exception: ImageCaptureException) {

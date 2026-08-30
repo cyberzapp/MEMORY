@@ -86,6 +86,7 @@ fun MainNavigation() {
             
             entry<MemoryDetailRoute> { route ->
                 val viewModel: MemoryDetailViewModel = viewModel(
+                    key = "detail_${route.memoryId}",
                     factory = object : ViewModelProvider.Factory {
                         override fun <T : ViewModel> create(modelClass: Class<T>): T {
                             return MemoryDetailViewModel(route.memoryId, appContainer.memoryRepository) as T

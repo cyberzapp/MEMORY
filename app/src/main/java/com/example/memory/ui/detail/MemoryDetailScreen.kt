@@ -24,6 +24,7 @@ import com.example.memory.data.db.ImageLabelJson
 import com.example.memory.data.db.MemoryEntity
 import com.example.memory.data.db.MemoryType
 import com.example.memory.data.db.ReminderEntity
+import com.example.memory.ml.EvidenceBundle
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.text.SimpleDateFormat
@@ -188,6 +189,7 @@ private fun MemoryDetailContent(
                         try {
                             if (!memory.rawImageLabels.isNullOrBlank()) {
                                 Json.decodeFromString<List<ImageLabelJson>>(memory.rawImageLabels)
+                                    .filter { EvidenceBundle.isUsefulLabel(it.text) }
                             } else emptyList()
                         } catch (e: Exception) { emptyList() }
                     }
