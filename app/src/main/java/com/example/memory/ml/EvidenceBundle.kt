@@ -95,26 +95,30 @@ data class EvidenceBundle(
      */
     fun fallbackSummary(): String {
         return buildString {
-            if (objects.isNotEmpty()) {
-                append(objects.joinToString(", ") { it.label })
-            }
+            // Prioritize Image Labels (400+ categories) over Object Detection (only 5 categories)
+            // Image labels give much better results: "Book, Desk, Laptop" vs "Home goods"
             if (imageLabels.isNotEmpty()) {
+                append(imageLabels.take(4).joinToString(", ") { it.text })
+            }
+            // Add specific object detection labels only if they add info
+            val meaningfulObjects = objects.filter { it.label != "Object" }
+            if (meaningfulObjects.isNotEmpty()) {
                 if (isNotEmpty()) append(" — ")
-                append(imageLabels.take(3).joinToString(", ") { it.text })
+                append(meaningfulObjects.joinToString(", ") { it.label })
             }
             if (!ocrText.isNullOrBlank()) {
-                if (isNotEmpty()) append(" — ")
-                append("text: ${ocrText.take(100)}")
+                if (isNotEmpty()) append(" | ")
+                append("\"${ocrText.take(80)}\"")
             }
             if (!transcript.isNullOrBlank()) {
-                if (isNotEmpty()) append(" — ")
-                append(transcript.take(150))
+                if (isNotEmpty()) append(" | ")
+                append("\"${transcript.take(120)}\"")
             }
             if (locationName != null) {
                 if (isNotEmpty()) append(" at ")
                 append(locationName)
             }
-        }.ifEmpty { "Memory captured at ${formatTimestamp(timestamp)}" }
+        }.ifEmpty { "Photo captured at ${formatTimestamp(timestamp)}" }
     }
 
     /**

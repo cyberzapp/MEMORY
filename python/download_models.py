@@ -32,5 +32,14 @@ if __name__ == "__main__":
         token=os.getenv("HF_TOKEN") # Pass your token via environment variable or replace this string
     )
     
+    # Download vocab.txt required for tokenizer
+    vocab_target = os.path.join(assets_dir, "vocab.txt")
+    download_model(
+        repo_id="sentence-transformers/all-MiniLM-L6-v2",
+        filename="vocab.txt",
+        target_path=vocab_target,
+        token=os.getenv("HF_TOKEN")
+    )
+    
     # 2. Gemma Model (placeholder instruction)
     print(f"NOTE: For Gemma, place 'gemma3-1b-int4.litertlm' manually into {assets_dir} if not downloaded.")

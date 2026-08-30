@@ -44,12 +44,10 @@ class MemoryProcessingWorker(
         val memoryId = inputData.getString(KEY_MEMORY_ID) ?: return Result.failure()
         Log.i(TAG, "Processing memory: $memoryId")
 
-        // Get dependencies (manual DI in Worker — Hilt WorkManager integration can be added)
-        val database = androidx.room.Room.databaseBuilder(
-            context, com.example.memory.data.db.MemoryDatabase::class.java, "memory_database"
-        ).build()
-        val dao = database.memoryDao()
-        val modelLifecycle = ModelLifecycleManager(context)
+        // Get dependencies from application container
+        val app = context.applicationContext as com.example.memory.MemoryApplication
+        val dao = app.container.memoryDao
+        val modelLifecycle = app.container.modelLifecycleManager
 
         try {
             // Load memory
@@ -144,8 +142,7 @@ class MemoryProcessingWorker(
             }
             return Result.retry()
         } finally {
-            modelLifecycle.close()
-            database.close()
+            // Do not close shared app-level dependencies
         }
     }
 

@@ -2,9 +2,11 @@ package com.example.memory.ui.search
 
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -17,6 +19,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
@@ -27,14 +31,17 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import coil3.compose.AsyncImage
+import com.example.memory.data.db.DetectedObjectJson
 import com.example.memory.data.db.MemoryEntity
 import com.example.memory.data.db.MemoryType
 import com.example.memory.data.repository.MemoryRepository
+import com.example.memory.data.repository.MemorySession
 import com.example.memory.data.repository.RankedMemory
 import com.example.memory.data.repository.SearchResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -57,8 +64,8 @@ class SearchViewModel(
     }
 
     /**
-     * Execute semantic search:
-     * query → embed → cosine KNN → Gemma answer
+     * Execute semantic search with temporal context:
+     * query → embed → cosine KNN → expand temporal window → session grouping → narrative answer
      */
     fun search() {
         val currentQuery = _query.value.trim()
@@ -183,24 +190,51 @@ fun SearchScreen(
                             AnswerBubble(state.result.answer)
                         }
 
-                        item(key = "results_header") {
-                            Text(
-                                "Evidence (${state.result.memories.size} matches):",
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.padding(top = 8.dp)
-                            )
+                        // Session timeline (if sessions exist)
+                        val sessions = state.result.sessions
+                        if (sessions.isNotEmpty()) {
+                            item(key = "session_header") {
+                                Text(
+                                    "Memory Timeline:",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(top = 8.dp)
+                                )
+                            }
+
+                            sessions.forEachIndexed { sessionIdx, session ->
+                                item(key = "session_$sessionIdx") {
+                                    SessionTimeline(
+                                        session = session,
+                                        onMemoryClick = onMemoryClick
+                                    )
+                                }
+                            }
                         }
 
-                        // Evidence cards
-                        items(
-                            items = state.result.memories,
-                            key = { it.entity.id }
-                        ) { rankedMemory ->
-                            EvidenceCard(
-                                rankedMemory = rankedMemory,
-                                onClick = { onMemoryClick(rankedMemory.entity.id) }
-                            )
+                        // Evidence cards for matches not in sessions
+                        val sessionMemoryIds = sessions.flatMap { it.memories.map { m -> m.id } }.toSet()
+                        val nonSessionMatches = state.result.memories.filter { it.entity.id !in sessionMemoryIds }
+
+                        if (nonSessionMatches.isNotEmpty()) {
+                            item(key = "results_header") {
+                                Text(
+                                    "Other matches (${nonSessionMatches.size}):",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(top = 8.dp)
+                                )
+                            }
+
+                            items(
+                                items = nonSessionMatches,
+                                key = { it.entity.id }
+                            ) { rankedMemory ->
+                                EvidenceCard(
+                                    rankedMemory = rankedMemory,
+                                    onClick = { onMemoryClick(rankedMemory.entity.id) }
+                                )
+                            }
                         }
 
                         item { Spacer(Modifier.height(16.dp)) }
@@ -276,6 +310,128 @@ private fun AnswerBubble(answer: String) {
     }
 }
 
+/**
+ * Session Timeline — vertical timeline showing connected memories.
+ *
+ *   ┃
+ *   ┣━ 10:30 📸 Whiteboard — Calculus equation
+ *   ┃
+ *   ┣━ 10:32 🎤 "Professor said this will be in the exam"
+ *   ┃
+ *   ┗━ 10:35 📸 Notebook — Integration notes
+ */
+@Composable
+private fun SessionTimeline(
+    session: MemorySession,
+    onMemoryClick: (String) -> Unit
+) {
+    val timeFormat = remember { SimpleDateFormat("h:mm a", Locale.getDefault()) }
+    val dateFormat = remember { SimpleDateFormat("MMM d", Locale.getDefault()) }
+    val lineColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        )
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Session header
+            Text(
+                text = "${dateFormat.format(Date(session.startTime))}, ${timeFormat.format(Date(session.startTime))} — ${timeFormat.format(Date(session.endTime))}",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(Modifier.height(12.dp))
+
+            // Timeline entries
+            session.memories.forEachIndexed { index, memory ->
+                val isLast = index == session.memories.lastIndex
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onMemoryClick(memory.id) }
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    // Timeline dot + line
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.width(24.dp)
+                    ) {
+                        // Dot
+                        Box(
+                            modifier = Modifier
+                                .size(10.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary)
+                        )
+                        // Vertical line (except for last item)
+                        if (!isLast) {
+                            Box(
+                                modifier = Modifier
+                                    .width(2.dp)
+                                    .height(40.dp)
+                                    .background(lineColor)
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.width(8.dp))
+
+                    // Time
+                    Text(
+                        text = timeFormat.format(Date(memory.capturedAt)),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.width(64.dp)
+                    )
+
+                    // Type icon
+                    val typeIcon = when (memory.type) {
+                        MemoryType.PHOTO -> "📸"
+                        MemoryType.VOICE -> "🎤"
+                        else -> "📝"
+                    }
+                    Text(typeIcon, modifier = Modifier.width(24.dp))
+
+                    Spacer(Modifier.width(4.dp))
+
+                    // Summary
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = memory.structuredSummary
+                                ?: memory.voiceTranscript?.take(60)
+                                ?: memory.rawOcrText?.take(60)
+                                ?: "Memory",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+
+                    // Thumbnail (if photo)
+                    if (memory.thumbnailPath != null) {
+                        Spacer(Modifier.width(8.dp))
+                        AsyncImage(
+                            model = File(memory.thumbnailPath),
+                            contentDescription = "Memory thumbnail",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 fun EvidenceCard(
     rankedMemory: RankedMemory,
@@ -318,7 +474,7 @@ fun EvidenceCard(
                             when (memory.type) {
                                 MemoryType.PHOTO -> Icons.Filled.Photo
                                 MemoryType.VOICE -> Icons.Filled.Mic
-                                else -> Icons.Filled.Note
+                                else -> Icons.Filled.Description
                             },
                             contentDescription = null,
                             modifier = Modifier.size(32.dp),
@@ -344,11 +500,18 @@ fun EvidenceCard(
 
                     Spacer(Modifier.height(4.dp))
 
-                    // Detected objects
-                    if (!memory.rawDetectedObjects.isNullOrBlank() &&
-                        memory.rawDetectedObjects != "[]") {
+                    // Parsed detected objects (instead of raw JSON)
+                    val parsedObjects = remember(memory.rawDetectedObjects) {
+                        try {
+                            if (!memory.rawDetectedObjects.isNullOrBlank() && memory.rawDetectedObjects != "[]") {
+                                Json.decodeFromString<List<DetectedObjectJson>>(memory.rawDetectedObjects)
+                                    .filter { it.label != "Object" }
+                            } else emptyList()
+                        } catch (e: Exception) { emptyList() }
+                    }
+                    if (parsedObjects.isNotEmpty()) {
                         Text(
-                            text = "🏷️ ${memory.rawDetectedObjects.take(60)}",
+                            text = "🏷️ ${parsedObjects.joinToString(", ") { it.label }}",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
@@ -360,6 +523,17 @@ fun EvidenceCard(
                     if (!memory.rawOcrText.isNullOrBlank()) {
                         Text(
                             text = "📝 \"${memory.rawOcrText.take(50)}\"",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+
+                    // Voice transcript
+                    if (!memory.voiceTranscript.isNullOrBlank()) {
+                        Text(
+                            text = "🎤 \"${memory.voiceTranscript.take(50)}\"",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
@@ -439,7 +613,7 @@ private fun SearchHints() {
 
         val hints = listOf(
             "Where did I put my charger?",
-            "What was the serial number I saw?",
+            "What did sir say about the exam?",
             "What happened around 9 AM?",
             "Where is my passport?"
         )

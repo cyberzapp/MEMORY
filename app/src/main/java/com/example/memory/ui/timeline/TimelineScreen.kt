@@ -63,6 +63,17 @@ class TimelineViewModel(
         }
     }
 
+    fun clearAllMemories() {
+        viewModelScope.launch {
+            val allMemories = groupedMemories.value.values.flatten()
+            for (memory in allMemories) {
+                memory.originalMediaPath?.let { File(it).delete() }
+                memory.thumbnailPath?.let { File(it).delete() }
+                repository.deleteMemory(memory)
+            }
+        }
+    }
+
     private fun formatDateHeader(epochMs: Long): String {
         val memoryDate = Calendar.getInstance().apply { timeInMillis = epochMs }
         val today = Calendar.getInstance()
@@ -94,6 +105,30 @@ fun TimelineScreen(
     modifier: Modifier = Modifier
 ) {
     val groupedMemories by viewModel.groupedMemories.collectAsState()
+    var showClearDialog by remember { mutableStateOf(false) }
+    var showMenu by remember { mutableStateOf(false) }
+
+    // Clear all confirmation dialog
+    if (showClearDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearDialog = false },
+            icon = { Icon(Icons.Filled.DeleteSweep, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+            title = { Text("Clear All Memories?") },
+            text = { Text("This will permanently delete all memories, photos, and associated data. This action cannot be undone.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.clearAllMemories()
+                        showClearDialog = false
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) { Text("Delete All") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -107,6 +142,30 @@ fun TimelineScreen(
                 actions = {
                     IconButton(onClick = onNavigateToSearch) {
                         Icon(Icons.Outlined.Search, "Search")
+                    }
+                    Box {
+                        IconButton(onClick = { showMenu = true }) {
+                            Icon(Icons.Filled.MoreVert, "More options")
+                        }
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Clear All Memories") },
+                                onClick = {
+                                    showMenu = false
+                                    showClearDialog = true
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Filled.DeleteSweep,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            )
+                        }
                     }
                 }
             )
@@ -155,12 +214,12 @@ fun TimelineScreen(
                         DateHeader(dateHeader)
                     }
 
-                    // Memory cards
+                    // Memory cards with swipe-to-delete
                     items(
                         items = memories,
                         key = { it.id }
                     ) { memory ->
-                        MemoryCard(
+                        SwipeToDismissMemoryCard(
                             memory = memory,
                             onClick = { onMemoryClick(memory.id) },
                             onDelete = { viewModel.deleteMemory(memory) }
@@ -169,6 +228,70 @@ fun TimelineScreen(
                 }
             }
         }
+    }
+}
+
+/**
+ * Swipe-to-dismiss wrapper for memory cards.
+ * Swipe left reveals a red delete background and removes the memory.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SwipeToDismissMemoryCard(
+    memory: MemoryEntity,
+    onClick: () -> Unit,
+    onDelete: () -> Unit
+) {
+    var showUndoSnackbar by remember { mutableStateOf(false) }
+
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { dismissValue ->
+            if (dismissValue == SwipeToDismissBoxValue.EndToStart) {
+                onDelete()
+                true
+            } else {
+                false
+            }
+        }
+    )
+
+    SwipeToDismissBox(
+        state = dismissState,
+        backgroundContent = {
+            // Red delete background shown on swipe
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.errorContainer),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Filled.Delete,
+                        contentDescription = "Delete",
+                        tint = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "Delete",
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        },
+        enableDismissFromStartToEnd = false,
+        enableDismissFromEndToStart = true
+    ) {
+        MemoryCard(
+            memory = memory,
+            onClick = onClick,
+            onDelete = onDelete
+        )
     }
 }
 
@@ -226,7 +349,7 @@ fun MemoryCard(
                         when (memory.type) {
                             MemoryType.PHOTO -> Icons.Filled.Photo
                             MemoryType.VOICE -> Icons.Filled.Mic
-                            else -> Icons.Filled.Note
+                            else -> Icons.Filled.Description
                         },
                         contentDescription = memory.type,
                         tint = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -239,12 +362,19 @@ fun MemoryCard(
 
             // Content
             Column(modifier = Modifier.weight(1f)) {
-                // Summary or raw text
-                Text(
-                    text = memory.structuredSummary
+                // Summary or raw text — status-aware
+                val displayText = when (memory.processingStatus) {
+                    ProcessingStatus.PENDING -> "Waiting to process…"
+                    ProcessingStatus.PROCESSING -> "Analyzing photo…"
+                    ProcessingStatus.NEEDS_RETRY -> "Needs retry"
+                    else -> memory.structuredSummary
+                        ?.takeIf { it.isNotBlank() && it != "Object, Object" && it != "Object" }
                         ?: memory.rawOcrText?.take(80)
                         ?: memory.voiceTranscript?.take(80)
-                        ?: "Processing...",
+                        ?: "Photo memory"
+                }
+                Text(
+                    text = displayText,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                     maxLines = 2,

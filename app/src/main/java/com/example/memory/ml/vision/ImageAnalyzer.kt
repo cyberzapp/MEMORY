@@ -2,6 +2,7 @@ package com.example.memory.ml.vision
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.util.Log
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.objects.ObjectDetection
 import com.google.mlkit.vision.objects.ObjectDetector
@@ -25,12 +26,24 @@ import kotlinx.coroutines.tasks.await
  * Runs three models in PARALLEL via coroutines:
  * 1. Object Detection → detected objects with labels + bounding boxes
  * 2. Text Recognition (OCR) → extracted text with positions
- * 3. Image Labeling → scene classification labels
+ * 3. Image Labeling → scene classification labels (THIS IS THE BEST ONE)
+ *
+ * KEY INSIGHT: ML Kit's base Object Detection model only classifies into
+ * 5 broad categories (Fashion, Food, Home goods, Places, Plants).
+ * For richer object identification, Image Labeling is far superior — it
+ * recognizes 400+ categories (Book, Laptop, Furniture, Vehicle, etc.).
+ *
+ * The summary generation now prioritizes Image Labels over Object Detection
+ * labels for more accurate descriptions.
  *
  * Total time: < 500ms on modern device (parallel execution).
  * All processing is on-device — zero network calls.
  */
 class ImageAnalyzer(context: Context) {
+
+    companion object {
+        private const val TAG = "ImageAnalyzer"
+    }
 
     private val textRecognizer: TextRecognizer =
         TextRecognition.getClient(TextRecognizerOptions.Builder().build())
@@ -44,10 +57,11 @@ class ImageAnalyzer(context: Context) {
                 .build()
         )
 
+    // Lower threshold to capture more labels — we filter by quality later
     private val imageLabeler: ImageLabeler =
         ImageLabeling.getClient(
             ImageLabelerOptions.Builder()
-                .setConfidenceThreshold(0.5f)
+                .setConfidenceThreshold(0.4f)
                 .build()
         )
 
@@ -68,6 +82,10 @@ class ImageAnalyzer(context: Context) {
         val ocrResult = ocrDeferred.await()
         val objectsResult = objectsDeferred.await()
         val labelsResult = labelsDeferred.await()
+
+        Log.i(TAG, "Analysis complete: ${objectsResult.size} objects, ${labelsResult.size} labels, OCR=${ocrResult.fullText?.take(50)}")
+        Log.i(TAG, "Objects: ${objectsResult.map { "${it.label}(${(it.confidence * 100).toInt()}%)" }}")
+        Log.i(TAG, "Labels: ${labelsResult.map { "${it.text}(${(it.confidence * 100).toInt()}%)" }}")
 
         VisionResult(
             detectedObjects = objectsResult,
@@ -92,6 +110,7 @@ class ImageAnalyzer(context: Context) {
                 }
             )
         } catch (e: Exception) {
+            Log.e(TAG, "OCR failed", e)
             OcrResult(null, emptyList())
         }
     }
@@ -99,27 +118,22 @@ class ImageAnalyzer(context: Context) {
     private suspend fun runObjectDetection(image: InputImage): List<DetectedObjectInfo> {
         return try {
             val results = objectDetector.process(image).await()
+            // ML Kit base model only has 5 categories: Fashion, Food, Home goods, Places, Plants
+            // Only keep labels the model is confident about
             results.flatMap { detectedObject ->
-                detectedObject.labels.map { label ->
-                    DetectedObjectInfo(
-                        label = label.text,
-                        confidence = label.confidence,
-                        boundingBox = detectedObject.boundingBox,
-                        trackingId = detectedObject.trackingId
-                    )
-                }
-            }.ifEmpty {
-                // Object detected but no classification labels
-                results.map { obj ->
-                    DetectedObjectInfo(
-                        label = "Object",
-                        confidence = 0f,
-                        boundingBox = obj.boundingBox,
-                        trackingId = obj.trackingId
-                    )
-                }
+                detectedObject.labels
+                    .filter { it.confidence >= 0.5f }
+                    .map { label ->
+                        DetectedObjectInfo(
+                            label = label.text,
+                            confidence = label.confidence,
+                            boundingBox = detectedObject.boundingBox,
+                            trackingId = detectedObject.trackingId
+                        )
+                    }
             }
         } catch (e: Exception) {
+            Log.e(TAG, "Object detection failed", e)
             emptyList()
         }
     }
@@ -127,7 +141,9 @@ class ImageAnalyzer(context: Context) {
     private suspend fun runImageLabeling(image: InputImage): List<ImageLabelInfo> {
         return try {
             val results = imageLabeler.process(image).await()
-            results.map { label ->
+            // Image Labeling has 400+ categories — much richer than Object Detection
+            // Take top 8 labels for comprehensive scene understanding
+            results.take(8).map { label ->
                 ImageLabelInfo(
                     text = label.text,
                     confidence = label.confidence,
@@ -135,6 +151,7 @@ class ImageAnalyzer(context: Context) {
                 )
             }
         } catch (e: Exception) {
+            Log.e(TAG, "Image labeling failed", e)
             emptyList()
         }
     }

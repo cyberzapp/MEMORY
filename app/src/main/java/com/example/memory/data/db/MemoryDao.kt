@@ -66,6 +66,20 @@ interface MemoryDao {
     @Query("DELETE FROM memories WHERE id = :memoryId")
     suspend fun deleteMemoryById(memoryId: String)
 
+    // === Temporal Context — Memory Graph ===
+
+    /**
+     * Fetch all processed memories within a time window around a center timestamp.
+     * Used to build temporal context for contextual search answers.
+     */
+    @Query("""
+        SELECT * FROM memories 
+        WHERE processingStatus = 'DONE' 
+          AND capturedAt BETWEEN :centerMs - :windowMs AND :centerMs + :windowMs 
+        ORDER BY capturedAt ASC
+    """)
+    suspend fun getTemporalContext(centerMs: Long, windowMs: Long): List<MemoryEntity>
+
     // === Reminder DAO ===
 
     @Query("SELECT * FROM reminders WHERE isCompleted = 0 ORDER BY triggerAt ASC")

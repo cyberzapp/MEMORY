@@ -29,15 +29,7 @@ data class MemoryEntity(
     val processingStatus: String = ProcessingStatus.PENDING,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
-) {
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is MemoryEntity) return false
-        return id == other.id
-    }
-
-    override fun hashCode(): Int = id.hashCode()
-}
+)
 
 /**
  * Processing status constants.

@@ -211,10 +211,11 @@ The current prototype focuses on validating the fundamental memory loop.
 ### Currently implemented
 * [x] Photo-based memory capture
 * [x] Voice-based memory capture
-* [x] On-device object/text processing
+* [x] On-device object/text processing (prioritizing Image Labeling for better accuracy)
 * [x] Local semantic representation
-* [x] Semantic memory retrieval
+* [x] Semantic memory retrieval with Temporal Context
 * [x] Local-first memory architecture
+* [x] Timeline management (swipe-to-delete, clear all memories)
 
 ### Planned next
 * [ ] Android notification-based reminders

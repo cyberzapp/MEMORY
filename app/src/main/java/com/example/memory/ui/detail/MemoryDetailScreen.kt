@@ -19,9 +19,12 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.example.memory.data.db.DetectedObjectJson
+import com.example.memory.data.db.ImageLabelJson
 import com.example.memory.data.db.MemoryEntity
 import com.example.memory.data.db.MemoryType
 import com.example.memory.data.db.ReminderEntity
+import kotlinx.serialization.json.Json
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -162,10 +165,39 @@ private fun MemoryDetailContent(
                         Text(text = memory.rawOcrText, style = MaterialTheme.typography.bodyMedium)
                     }
 
-                    if (!memory.rawDetectedObjects.isNullOrBlank()) {
+                    // Parse and display detected objects
+                    val parsedObjects = remember(memory.rawDetectedObjects) {
+                        try {
+                            if (!memory.rawDetectedObjects.isNullOrBlank()) {
+                                Json.decodeFromString<List<DetectedObjectJson>>(memory.rawDetectedObjects)
+                                    .filter { it.label != "Object" }
+                            } else emptyList()
+                        } catch (e: Exception) { emptyList() }
+                    }
+                    if (parsedObjects.isNotEmpty()) {
                         Spacer(Modifier.height(8.dp))
                         Text("Objects Detected", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-                        Text(text = memory.rawDetectedObjects, style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            text = parsedObjects.joinToString(", ") { "${it.label} (${(it.confidence * 100).toInt()}%)" },
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+
+                    // Parse and display image labels
+                    val parsedLabels = remember(memory.rawImageLabels) {
+                        try {
+                            if (!memory.rawImageLabels.isNullOrBlank()) {
+                                Json.decodeFromString<List<ImageLabelJson>>(memory.rawImageLabels)
+                            } else emptyList()
+                        } catch (e: Exception) { emptyList() }
+                    }
+                    if (parsedLabels.isNotEmpty()) {
+                        Spacer(Modifier.height(8.dp))
+                        Text("Scene Labels", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                        Text(
+                            text = parsedLabels.joinToString(", ") { it.text },
+                            style = MaterialTheme.typography.bodyMedium
+                        )
                     }
                 }
             }

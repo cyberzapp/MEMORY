@@ -72,9 +72,12 @@ class GemmaEngine(private val context: Context) {
     /**
      * ROLE 2: Natural-Language Recall
      * Generates a conversational answer from question + retrieved memories.
+     * Now includes temporal context — memories are ordered by time within sessions.
      *
-     * Input: question + ranked memories
-     * Output: "Your USB-C charger was last seen beside your laptop on the study desk."
+     * Input: question + ranked memories (with type info)
+     * Output: "At 10:32 AM, you recorded that your professor said the integration
+     *          topic would be in the exam. You had photographed the related equation
+     *          two minutes earlier."
      */
     suspend fun generateAnswer(
         question: String,
@@ -86,15 +89,22 @@ class GemmaEngine(private val context: Context) {
         }
 
         val contextBlock = memorySummaries.joinToString("\n") { m ->
-            "[${m.rank}] ${m.summary} (${m.location ?: "unknown location"}, ${m.time}) — ${(m.score * 100).toInt()}% match"
+            val typeIcon = when (m.type) {
+                "PHOTO" -> "📸"
+                "VOICE" -> "🎤"
+                "NOTE" -> "📝"
+                else -> "📌"
+            }
+            "[${m.rank}] $typeIcon ${m.summary} (${m.location ?: "unknown location"}, ${m.time}) — ${(m.score * 100).toInt()}% match"
         }
 
         val prompt = """
             |You are a personal memory assistant. Answer the question using ONLY
             |the retrieved memories below. Be specific about locations and times.
+            |Connect related memories by their temporal proximity.
             |If no memory matches, say "I don't have a memory about that."
             |
-            |Retrieved memories:
+            |Retrieved memories (ordered by time):
             |$contextBlock
             |
             |Question: $question
@@ -113,16 +123,35 @@ class GemmaEngine(private val context: Context) {
     }
 
     /**
-     * Template-based fallback — works without Gemma.
-     * Returns a useful answer from the top-ranked memory.
+     * Template-based fallback with temporal narrative.
+     * Returns a contextual answer that connects multiple memories by time.
      */
     private fun fallbackAnswer(memories: List<RankedMemoryInfo>): String {
         val top = memories.firstOrNull() ?: return "I don't have a memory about that."
+
         return buildString {
-            append("Based on your memories: ${top.summary}")
+            val topVerb = typeVerb(top.type)
+            append("At ${top.time}, you $topVerb: \"${top.summary}\"")
             if (top.location != null) append(" at ${top.location}")
-            append(" (${top.time})")
+            append(".")
+
+            // Add context from other memories in the session
+            val others = memories.drop(1).take(3) // up to 3 context memories
+            if (others.isNotEmpty()) {
+                append("\n\nAround the same time:")
+                for (other in others) {
+                    val otherVerb = typeVerb(other.type)
+                    append("\n• ${other.time} — You $otherVerb: \"${other.summary}\"")
+                }
+            }
         }
+    }
+
+    private fun typeVerb(type: String?): String = when (type) {
+        "PHOTO" -> "photographed"
+        "VOICE" -> "recorded"
+        "NOTE" -> "noted"
+        else -> "captured"
     }
 
     fun close() {
@@ -133,11 +162,13 @@ class GemmaEngine(private val context: Context) {
 
 /**
  * Info about a retrieved memory for Gemma's context window.
+ * Now includes type for type-aware narrative generation.
  */
 data class RankedMemoryInfo(
     val rank: Int,
     val summary: String,
     val location: String?,
     val time: String,
-    val score: Float
+    val score: Float,
+    val type: String? = null  // "PHOTO", "VOICE", "NOTE"
 )

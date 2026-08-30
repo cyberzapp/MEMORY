@@ -51,8 +51,16 @@ class EmbeddingEngine(private val context: Context) {
                     // addDelegate(GpuDelegate())
                 }
                 interpreter = org.tensorflow.lite.Interpreter(modelBuffer, options)
+                
+                // Resize dynamic input tensors from default [1,1] to [1, MAX_SEQ_LEN]
+                val inputCount = interpreter!!.inputTensorCount
+                for (i in 0 until inputCount) {
+                    interpreter!!.resizeInput(i, intArrayOf(1, MAX_SEQ_LEN))
+                }
+                interpreter!!.allocateTensors()
+                
                 isInitialized = true
-                Log.i(TAG, "Embedding model loaded successfully (${EMBEDDING_DIM}-dim)")
+                Log.i(TAG, "Embedding model loaded successfully (${EMBEDDING_DIM}-dim, $inputCount inputs, seq_len=$MAX_SEQ_LEN)")
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to load embedding model, using MOCK fallback", e)
                 isInitialized = true // Mark as initialized anyway so we can use the mock fallback
@@ -80,16 +88,24 @@ class EmbeddingEngine(private val context: Context) {
         synchronized(lock) {
             val tokens = tokenizer.tokenize(text)
 
-            // Prepare input tensors
+            // Prepare input tensors dynamically based on what the model expects
             val inputIds = Array(1) { IntArray(MAX_SEQ_LEN) }
             val attentionMask = Array(1) { IntArray(MAX_SEQ_LEN) }
-            val tokenTypeIds = Array(1) { IntArray(MAX_SEQ_LEN) }
 
             inputIds[0] = tokens.inputIds
             attentionMask[0] = tokens.attentionMask
-            tokenTypeIds[0] = tokens.tokenTypeIds
 
-            val inputs = arrayOf(inputIds, attentionMask, tokenTypeIds)
+            val inputCount = interpreter!!.inputTensorCount
+            val inputs = Array<Any>(inputCount) { IntArray(1) }
+            for (i in 0 until inputCount) {
+                val tensorName = interpreter!!.getInputTensor(i).name()
+                // Typically 'inputs' is input_ids, and 'inputs_1' is attention_mask
+                if (tensorName.contains("inputs_1") || tensorName.contains("attention_mask")) {
+                    inputs[i] = attentionMask
+                } else {
+                    inputs[i] = inputIds
+                }
+            }
 
             // Prepare output buffer
             val output = Array(1) { FloatArray(EMBEDDING_DIM) }
