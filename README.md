@@ -42,7 +42,7 @@ cd MEMORY
 **2. Download the On-Device AI Models**
 MEMORY relies on quantized ML models (like `all-MiniLM-L6-v2`) that run entirely on the device. You must download them into the app's `assets` folder before building.
 ```bash
-cd python
+cd native/python
 # Create a virtual environment (optional but recommended)
 python -m venv venv
 source venv/bin/activate  # On Windows use: venv\Scripts\activate
@@ -57,7 +57,7 @@ python download_models.py
 
 **3. Open and Build in Android Studio**
 * Open Android Studio and select **Open**.
-* Navigate to the `MEMORY` folder (the root directory containing `build.gradle.kts` and `settings.gradle.kts`) and open it.
+* Navigate to the `MEMORY/native` folder (the directory containing `build.gradle.kts` and `settings.gradle.kts`) and open it.
 * Allow Gradle to sync and download all Android dependencies.
 * Connect your physical Android device (with USB Debugging enabled) or start an Android Emulator.
 * Click the **Run** (▶) button to install the app.
