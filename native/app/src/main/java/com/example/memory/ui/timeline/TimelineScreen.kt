@@ -101,6 +101,7 @@ fun TimelineScreen(
     viewModel: TimelineViewModel,
     onNavigateBack: () -> Unit,
     onNavigateToSearch: () -> Unit,
+    onNavigateToSettings: () -> Unit,
     onMemoryClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -133,15 +134,13 @@ fun TimelineScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Timeline", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
-                    }
-                },
+                title = { },
                 actions = {
                     IconButton(onClick = onNavigateToSearch) {
                         Icon(Icons.Outlined.Search, "Search")
+                    }
+                    IconButton(onClick = { /* TODO Filter */ }) {
+                        Icon(Icons.Filled.FilterList, "Filter")
                     }
                     Box {
                         IconButton(onClick = { showMenu = true }) {
@@ -151,6 +150,16 @@ fun TimelineScreen(
                             expanded = showMenu,
                             onDismissRequest = { showMenu = false }
                         ) {
+                            DropdownMenuItem(
+                                text = { Text("Settings") },
+                                onClick = {
+                                    showMenu = false
+                                    onNavigateToSettings()
+                                },
+                                leadingIcon = {
+                                    Icon(Icons.Outlined.Settings, contentDescription = null)
+                                }
+                            )
                             DropdownMenuItem(
                                 text = { Text("Clear All Memories") },
                                 onClick = {
@@ -212,6 +221,13 @@ fun TimelineScreen(
                     // Sticky date header
                     item(key = "header_$dateHeader") {
                         DateHeader(dateHeader)
+                    }
+
+                    // Display Daily Summary for Today
+                    if (dateHeader == "Today" && memories.isNotEmpty()) {
+                        item(key = "summary_$dateHeader") {
+                            DailySummaryCard(memories = memories)
+                        }
                     }
 
                     // Memory cards with swipe-to-delete
@@ -299,11 +315,71 @@ private fun SwipeToDismissMemoryCard(
 private fun DateHeader(text: String) {
     Text(
         text = text,
-        style = MaterialTheme.typography.labelLarge,
-        fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(vertical = 8.dp)
+        style = MaterialTheme.typography.displaySmall,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(start = 24.dp, top = 24.dp, bottom = 16.dp, end = 24.dp)
     )
+}
+
+@Composable
+fun DailySummaryCard(memories: List<MemoryEntity>) {
+    // Generate a quick summary text
+    val summaryText = if (memories.size > 2) {
+        val locations = memories.mapNotNull { it.locationName }.distinct()
+        val locText = if (locations.isNotEmpty()) " You visited ${locations.joinToString(" and ")}." else ""
+        "You captured ${memories.size} memories today.$locText"
+    } else {
+        "You captured ${memories.size} memories today."
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(24.dp)
+        ) {
+            Text(
+                "MEMORY",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 2.sp,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "Here is your daily summary",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(12.dp))
+            Text(
+                summaryText,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(16.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Outlined.PhotoLibrary,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "Total ${memories.size} Memories Captured",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -313,140 +389,93 @@ fun MemoryCard(
     onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Card(
+    Row(
         modifier = modifier
             .fillMaxWidth()
-            .animateContentSize()
-            .clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-        )
+            .clickable { onClick() }
+            .padding(horizontal = 24.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
+        // Thumbnail (rounded square)
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.Top
+                .size(64.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.Center
         ) {
-            // Thumbnail or type icon
-            Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center
-            ) {
-                if (memory.thumbnailPath != null) {
-                    AsyncImage(
-                        model = File(memory.thumbnailPath),
-                        contentDescription = "Memory thumbnail",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    Icon(
-                        when (memory.type) {
-                            MemoryType.PHOTO -> Icons.Filled.Photo
-                            MemoryType.VOICE -> Icons.Filled.Mic
-                            else -> Icons.Filled.Description
-                        },
-                        contentDescription = memory.type,
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.size(32.dp)
-                    )
+            if (memory.thumbnailPath != null) {
+                AsyncImage(
+                    model = File(memory.thumbnailPath),
+                    contentDescription = "Memory thumbnail",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                Icon(
+                    when (memory.type) {
+                        MemoryType.PHOTO -> Icons.Filled.Photo
+                        MemoryType.VOICE -> Icons.Filled.Mic
+                        else -> Icons.Filled.Description
+                    },
+                    contentDescription = memory.type,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(32.dp)
+                )
+            }
+        }
+
+        Spacer(Modifier.width(16.dp))
+
+        // Content
+        Column(modifier = Modifier.weight(1f)) {
+            // Title (Status-aware)
+            val displayText = when (memory.processingStatus) {
+                ProcessingStatus.PENDING -> "Waiting..."
+                ProcessingStatus.PROCESSING -> "Analyzing..."
+                ProcessingStatus.NEEDS_RETRY -> "Retry needed"
+                else -> {
+                    val rawStr = memory.structuredSummary ?: memory.rawOcrText ?: memory.voiceTranscript ?: "Memory"
+                    val lines = rawStr.split("\n", ".").filter { it.isNotBlank() }
+                    lines.firstOrNull()?.trim() ?: "Photo memory"
                 }
             }
 
-            Spacer(Modifier.width(12.dp))
+            Text(
+                text = displayText,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
 
-            // Content
-            Column(modifier = Modifier.weight(1f)) {
-                // Summary or raw text — status-aware
-                val displayText = when (memory.processingStatus) {
-                    ProcessingStatus.PENDING -> "Waiting to process…"
-                    ProcessingStatus.PROCESSING -> "Analyzing photo…"
-                    ProcessingStatus.NEEDS_RETRY -> "Needs retry"
-                    else -> memory.structuredSummary
-                        ?.takeIf { it.isNotBlank() && it != "Object, Object" && it != "Object" }
-                        ?: memory.rawOcrText?.take(80)
-                        ?: memory.voiceTranscript?.take(80)
-                        ?: "Photo memory"
-                }
-                Text(
-                    text = displayText,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
+            Spacer(Modifier.height(4.dp))
 
+            // Subtitle: Time • Location
+            val timeString = SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date(memory.capturedAt))
+            val locationString = memory.locationName?.let { " • $it" } ?: ""
+            Text(
+                text = "$timeString$locationString",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            
+            // Processing status indicator
+            if (memory.processingStatus == ProcessingStatus.PROCESSING) {
                 Spacer(Modifier.height(4.dp))
-
-                // Metadata row
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    if (memory.locationName != null) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Filled.LocationOn,
-                                contentDescription = null,
-                                modifier = Modifier.size(14.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(Modifier.width(2.dp))
-                            Text(
-                                memory.locationName,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Filled.AccessTime,
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.width(2.dp))
-                        Text(
-                            SimpleDateFormat("h:mm a", Locale.getDefault())
-                                .format(Date(memory.capturedAt)),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-
-                // Processing status indicator
-                if (memory.processingStatus != ProcessingStatus.DONE) {
-                    Spacer(Modifier.height(4.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (memory.processingStatus == ProcessingStatus.PROCESSING) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(12.dp),
-                                strokeWidth = 2.dp
-                            )
-                        }
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            when (memory.processingStatus) {
-                                ProcessingStatus.PENDING -> "⏳ Waiting to process"
-                                ProcessingStatus.PROCESSING -> "🧠 Understanding..."
-                                ProcessingStatus.NEEDS_RETRY -> "⚠️ Retry needed"
-                                ProcessingStatus.FAILED -> "❌ Processing failed"
-                                else -> ""
-                            },
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                        )
-                    }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(12.dp),
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        "Understanding...",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }

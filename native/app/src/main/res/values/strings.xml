@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Memory</string>
+    <string name="shortcut_capture_short">Capture</string>
+    <string name="shortcut_capture_long">Capture a Memory</string>
 </resources>

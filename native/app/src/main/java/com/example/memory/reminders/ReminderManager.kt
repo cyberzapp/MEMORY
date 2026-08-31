@@ -45,16 +45,28 @@ class ReminderManager(private val context: Context) {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        try {
-            alarmManager.setExactAndAllowWhileIdle(
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
+            // Fallback to inexact alarm if permission is denied
+            alarmManager.setAndAllowWhileIdle(
                 AlarmManager.RTC_WAKEUP,
                 triggerAtMs,
                 pendingIntent
             )
-        } catch (e: SecurityException) {
-            // Android 14+ requires SCHEDULE_EXACT_ALARM permission.
-            // If the permission is revoked, we can't schedule exact alarms.
-            // Fallback to inexact alarm if necessary, but we assume we have the permission.
+        } else {
+            try {
+                alarmManager.setExactAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    triggerAtMs,
+                    pendingIntent
+                )
+            } catch (e: SecurityException) {
+                // Should not happen since we check canScheduleExactAlarms, but just in case
+                alarmManager.setAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    triggerAtMs,
+                    pendingIntent
+                )
+            }
         }
     }
 

@@ -24,8 +24,15 @@ This project is built to run entirely on an Android device. You can build and in
 * **JDK**: Java 17 (bundled with recent Android Studio versions).
 * **Python**: Python 3.9+ (used to download the quantized ML models).
 * **Graphics / Virtualization**: 
-  * If testing via **Android Emulator**: Your host machine should support hardware virtualization (Intel HAXM, AMD Hypervisor, Windows Hyper-V, or Apple Virtualization Framework for Apple Silicon). A dedicated Graphics Card (NVIDIA/AMD) or Apple Silicon GPU is highly recommended to accelerate the emulator UI and ML kit operations via `Hardware (Host)` GPU mode.
-  * If testing on a **Physical Device**: No specific desktop GPU is required. The host machine is only used to compile the APK.
+  * **Android Emulator**: Your host machine MUST support hardware virtualization:
+    * **Windows**: Enable Hyper-V or Windows Hypervisor Platform (WHPX).
+    * **macOS**: Apple Virtualization Framework (Apple Silicon) or HAXM (Intel).
+    * **Linux**: KVM (Kernel-based Virtual Machine) must be installed and enabled.
+  * **GPU Requirements (Emulator Acceleration)**:
+    * **NVIDIA GPUs**: Ensure you have the latest Game Ready or Studio drivers installed. The Android Emulator will automatically use the GPU for OpenGL ES acceleration.
+    * **AMD GPUs**: Ensure latest Adrenalin drivers are installed. Windows users can use WHPX, Linux users use KVM.
+    * **Apple Silicon (M1/M2/M3)**: The emulator runs natively using the Metal API for acceleration. Ensure you download the `arm64-v8a` system images in Android Studio, not `x86_64`.
+  * **Physical Device**: No specific desktop GPU is required if you are plugging in a physical Android phone. The host machine is only used to compile the APK.
 
 #### For the Android Device
 * **OS**: Android 9.0 (API 28) or higher.
@@ -218,8 +225,6 @@ The current prototype focuses on validating the fundamental memory loop.
 * [x] Timeline management (swipe-to-delete, clear all memories)
 
 ### Planned next
-* [ ] Android notification-based reminders
-* [ ] One-tap quick capture
 * [ ] Full Gemma 3 integration for natural-language extraction/recall
 * [ ] Improved spatial and temporal context
 * [ ] Device-specific AI acceleration (NPU/GPU delegates)

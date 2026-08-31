@@ -18,6 +18,8 @@
 
     <!-- Foreground service for long ML processing -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <application
         android:name=".MemoryApplication"
@@ -44,6 +46,11 @@
             android:resource="@xml/shortcuts" />
 
         <receiver android:name=".reminders.ReminderReceiver" android:exported="false" />
+
+        <service
+            android:name=".service.VoiceCaptureService"
+            android:foregroundServiceType="microphone"
+            android:exported="false" />
 
     </application>
 

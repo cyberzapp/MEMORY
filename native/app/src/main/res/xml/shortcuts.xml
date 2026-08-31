@@ -22,4 +22,18 @@
         </intent>
     </capability>
 
+    <shortcut
+        android:shortcutId="shortcut_capture"
+        android:enabled="true"
+        android:icon="@android:drawable/ic_menu_camera"
+        android:shortcutShortLabel="@string/shortcut_capture_short"
+        android:shortcutLongLabel="@string/shortcut_capture_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.example.memory"
+            android:targetClass="com.example.memory.MainActivity">
+            <extra android:name="trigger_capture" android:value="true" />
+        </intent>
+    </shortcut>
+
 </shortcuts>

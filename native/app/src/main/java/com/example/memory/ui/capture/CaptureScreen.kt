@@ -53,6 +53,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import androidx.core.content.ContextCompat
 import java.io.File
 import java.io.FileOutputStream
 import java.util.Locale
@@ -209,6 +210,7 @@ fun CaptureScreen(
     viewModel: CaptureViewModel,
     onNavigateToTimeline: () -> Unit,
     onNavigateToSearch: () -> Unit,
+    triggerCaptureFlow: kotlinx.coroutines.flow.SharedFlow<Unit> = kotlinx.coroutines.flow.MutableSharedFlow(),
     modifier: Modifier = Modifier
 ) {
     val captureState by viewModel.captureState.collectAsState()
@@ -216,24 +218,52 @@ fun CaptureScreen(
     val context = LocalContext.current
 
     var imageCapture by remember { mutableStateOf<ImageCapture?>(null) }
+    
+    LaunchedEffect(triggerCaptureFlow, imageCapture) {
+        triggerCaptureFlow.collect {
+            if (imageCapture != null && captureState == CaptureState.Ready) {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                
+                imageCapture?.takePicture(
+                    ContextCompat.getMainExecutor(context),
+                    object : ImageCapture.OnImageCapturedCallback() {
+                        override fun onCaptureSuccess(image: ImageProxy) {
+                            try {
+                                val bitmap = image.toBitmap()
+                                viewModel.capturePhoto(bitmap)
+                            } finally {
+                                image.close()
+                            }
+                        }
+
+                        override fun onError(exception: ImageCaptureException) {
+                            Log.e("CaptureScreen", "Photo capture failed", exception)
+                        }
+                    }
+                )
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Text(
-                        "MEMORY",
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 3.sp
-                    )
+                title = { },
+                navigationIcon = {
+                    IconButton(onClick = { /* TODO close */ }) {
+                        Icon(Icons.Filled.Close, "Close")
+                    }
                 },
                 actions = {
                     IconButton(onClick = onNavigateToTimeline) {
                         Icon(Icons.Outlined.Timeline, "Timeline")
                     }
+                    IconButton(onClick = { /* TODO flash */ }) {
+                        Icon(Icons.Filled.FlashOn, "Flash")
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = Color.Transparent
                 )
             )
         }
@@ -304,18 +334,25 @@ fun CaptureScreen(
                 }
             }
 
-            // Capture buttons
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                // Voice Button
-                Box(
-                    modifier = Modifier
-                        .size(64.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.secondaryContainer)
+                Text(
+                    text = "Tap to remember",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                
+                Spacer(Modifier.height(16.dp))
+                
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    // Voice Button
+                    Box(
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
                         .clickable {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             try {
@@ -340,12 +377,12 @@ fun CaptureScreen(
                 Spacer(Modifier.width(24.dp))
                 
                 // Photo Button
-                Box(
-                    modifier = Modifier
-                        .size(80.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary)
-                        .border(4.dp, MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.3f), CircleShape)
+                    Box(
+                        modifier = Modifier
+                            .size(80.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary)
+                            .border(4.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f), CircleShape)
                         .clickable {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             imageCapture?.let { ic ->
@@ -354,14 +391,7 @@ fun CaptureScreen(
                                     object : ImageCapture.OnImageCapturedCallback() {
                                         override fun onCaptureSuccess(image: ImageProxy) {
                                             val bitmap = image.toBitmap()
-                                            val rotation = image.imageInfo.rotationDegrees
-                                            val finalBitmap = if (rotation != 0) {
-                                                val matrix = android.graphics.Matrix().apply { postRotate(rotation.toFloat()) }
-                                                android.graphics.Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
-                                            } else {
-                                                bitmap
-                                            }
-                                            viewModel.capturePhoto(finalBitmap)
+                                            viewModel.capturePhoto(bitmap)
                                             image.close()
                                         }
                                         override fun onError(exception: ImageCaptureException) {
@@ -382,29 +412,7 @@ fun CaptureScreen(
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
-
-            // Search bar
-            OutlinedTextField(
-                value = "",
-                onValueChange = {},
-                placeholder = {
-                    Text("🔍 Ask MEMORY anything...")
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp)
-                    .clickable { onNavigateToSearch() },
-                enabled = false,
-                shape = RoundedCornerShape(28.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                    disabledBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                    disabledPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            )
-
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(32.dp))
         }
     }
 }
@@ -430,7 +438,7 @@ fun CameraPreview(
                 }
 
                 val imageCapture = ImageCapture.Builder()
-                    .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+                    .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
                     .build()
 
                 onImageCaptureReady(imageCapture)

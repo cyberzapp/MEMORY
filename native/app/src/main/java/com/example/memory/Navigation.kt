@@ -20,9 +20,13 @@ import com.example.memory.ui.timeline.TimelineScreen
 import com.example.memory.ui.timeline.TimelineViewModel
 import com.example.memory.ui.detail.MemoryDetailScreen
 import com.example.memory.ui.detail.MemoryDetailViewModel
+import com.example.memory.ui.settings.SettingsScreen
+
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
 
 @Composable
-fun MainNavigation() {
+fun MainNavigation(triggerCaptureFlow: SharedFlow<Unit> = MutableSharedFlow()) {
     val backStack = rememberNavBackStack(CaptureRoute)
     val context = LocalContext.current
     val appContainer = (context.applicationContext as MemoryApplication).container
@@ -41,6 +45,7 @@ fun MainNavigation() {
                 )
                 CaptureScreen(
                     viewModel = viewModel,
+                    triggerCaptureFlow = triggerCaptureFlow,
                     onNavigateToTimeline = { backStack.add(TimelineRoute) },
                     onNavigateToSearch = { backStack.add(SearchRoute) },
                     modifier = Modifier.safeDrawingPadding()
@@ -59,6 +64,7 @@ fun MainNavigation() {
                     viewModel = viewModel,
                     onNavigateBack = { backStack.removeLastOrNull() },
                     onNavigateToSearch = { backStack.add(SearchRoute) },
+                    onNavigateToSettings = { backStack.add(SettingsRoute) },
                     onMemoryClick = { memoryId ->
                         backStack.add(MemoryDetailRoute(memoryId))
                     },
@@ -97,6 +103,12 @@ fun MainNavigation() {
                     viewModel = viewModel,
                     onNavigateBack = { backStack.removeLastOrNull() },
                     modifier = Modifier.safeDrawingPadding()
+                )
+            }
+            
+            entry<SettingsRoute> {
+                SettingsScreen(
+                    onNavigateBack = { backStack.removeLastOrNull() }
                 )
             }
         }

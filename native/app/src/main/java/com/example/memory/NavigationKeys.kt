@@ -18,3 +18,6 @@ data object SearchRoute : NavKey
 
 @Serializable
 data class MemoryDetailRoute(val memoryId: String) : NavKey
+
+@Serializable
+data object SettingsRoute : NavKey

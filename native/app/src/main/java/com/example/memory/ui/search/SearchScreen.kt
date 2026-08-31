@@ -113,10 +113,18 @@ fun SearchScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Search", fontWeight = FontWeight.Bold) },
+                title = { Text("Ask MEMORY", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { /* TODO */ }) {
+                        Icon(Icons.Filled.GraphicEq, "Voice")
+                    }
+                    IconButton(onClick = { /* TODO Settings */ }) {
+                        Icon(Icons.Outlined.Settings, "Settings")
                     }
                 }
             )
@@ -159,7 +167,13 @@ fun SearchScreen(
             // Search results
             when (val state = searchState) {
                 is SearchState.Idle -> {
-                    SearchHints()
+                    SearchHints(
+                        onHintClick = { text ->
+                            viewModel.updateQuery(text)
+                            viewModel.search()
+                            keyboardController?.hide()
+                        }
+                    )
                 }
 
                 is SearchState.Searching -> {
@@ -589,40 +603,43 @@ fun EvidenceCard(
 }
 
 @Composable
-private fun SearchHints() {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Icon(
-            Icons.Outlined.Psychology,
-            contentDescription = null,
-            modifier = Modifier.size(48.dp),
-            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
-        )
-        Spacer(Modifier.height(16.dp))
+private fun SearchHints(
+    onHintClick: (String) -> Unit
+) {
+    Column(modifier = Modifier.padding(24.dp)) {
         Text(
-            "Ask me anything about your memories",
+            "Try asking",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(Modifier.height(16.dp))
-
-        val hints = listOf(
+        val suggestions = listOf(
             "Where did I put my charger?",
-            "What did sir say about the exam?",
+            "What did I need to remember today?",
             "What happened around 9 AM?",
             "Where is my passport?"
         )
-        hints.forEach { hint ->
-            SuggestionChip(
-                onClick = { },
-                label = { Text(hint, style = MaterialTheme.typography.bodySmall) },
-                modifier = Modifier.padding(vertical = 2.dp)
-            )
+        suggestions.forEach { text ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onHintClick(text) }
+                    .padding(vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text,
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    Icons.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
         }
     }
 }

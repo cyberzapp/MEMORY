@@ -41,5 +41,15 @@ if __name__ == "__main__":
         token=os.getenv("HF_TOKEN")
     )
     
+    # 3. Object Detection Model (EfficientDet-Lite0 or SSD MobileNet)
+    # Using a reliable HF mirror for the TFLite object detection model
+    obj_target = os.path.join(assets_dir, "object_detection.tflite")
+    download_model(
+        repo_id="nateraw/tflite-object-detection",
+        filename="ssd_mobilenet_v1_1_metadata_1.tflite",
+        target_path=obj_target,
+        token=os.getenv("HF_TOKEN")
+    )
+    
     # 2. Gemma Model (placeholder instruction)
     print(f"NOTE: For Gemma, place 'gemma3-1b-int4.litertlm' manually into {assets_dir} if not downloaded.")

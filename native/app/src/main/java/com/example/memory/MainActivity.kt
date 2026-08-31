@@ -25,9 +25,18 @@ import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import com.example.memory.theme.MemoryTheme
 
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import android.content.Intent
+
 class MainActivity : ComponentActivity() {
+    private val _triggerCaptureFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val triggerCaptureFlow = _triggerCaptureFlow.asSharedFlow()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        handleIntent(intent)
 
         enableEdgeToEdge()
         setContent {
@@ -37,10 +46,22 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     PermissionRequestWrapper {
-                        MainNavigation()
+                        MainNavigation(triggerCaptureFlow)
                     }
                 }
             }
+        }
+    }
+    
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+    
+    private fun handleIntent(intent: Intent?) {
+        if (intent?.getBooleanExtra("trigger_capture", false) == true) {
+            _triggerCaptureFlow.tryEmit(Unit)
+            intent.removeExtra("trigger_capture") // prevent re-triggering on rotation
         }
     }
 }
