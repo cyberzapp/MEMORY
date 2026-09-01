@@ -12,6 +12,13 @@ The core memory pipeline is designed to run locally on the Android device, minim
 
 ---
 
+## 🚀 Quick Links
+* 🌐 **Website / Demo**: [MEMORY Website](https://your-website-url.com) *(Update with your live URL)*
+* 📥 **Download APK**: [Latest Release (v1.0)](https://github.com/cyberzapp/MEMORY/releases/latest)
+* 🎨 **Figma Prototype**: [View Design](https://www.figma.com/design/k2kha7pcW4v4H0oaaDgQSY/Memory-workboard?node-id=0-1&t=QNL5gsPfSPBe9ePp-1)
+
+---
+
 ## Getting Started & Installation Guide
 
 This project is built to run entirely on an Android device. You can build and install it from any major desktop OS (Windows, macOS, or Linux).
@@ -68,6 +75,16 @@ python download_models.py
 * Allow Gradle to sync and download all Android dependencies.
 * Connect your physical Android device (with USB Debugging enabled) or start an Android Emulator.
 * Click the **Run** (▶) button to install the app.
+
+### 4. Running the Web Frontend (Landing Page)
+The repository also includes a Next.js landing page inside the `web` folder.
+```bash
+cd web
+npm install
+npm run dev
+```
+* Open `http://localhost:3000` in your browser.
+* To configure your live APK and GitHub links, create a `.env` file in the `web` folder based on `.env.example` (or set `NEXT_PUBLIC_APK_URL` and `NEXT_PUBLIC_GITHUB_URL`).
 
 ---
 

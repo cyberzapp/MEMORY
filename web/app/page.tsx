@@ -121,12 +121,12 @@ export default function Home() {
 
       <section id="try" className="section try-section">
         <div className="shell try-layout">
-          <div><p className="eyebrow">TRY THE MVP</p><h2>Capture once.<br /><em>Remember later.</em></h2><p>Watch the short demo or install the Android build to experience the current MVP.</p><div className="actions"><a className="button white" href={site.apk}>Download APK ↗</a><a className="button outline-white" href={"https://github.com/cyberzapp/MEMORY"} target="_blank" rel="noreferrer">View GitHub ↗</a></div></div>
+          <div><p className="eyebrow">TRY THE MVP</p><h2>Capture once.<br /><em>Remember later.</em></h2><p>Watch the short demo or install the Android build to experience the current MVP.</p><div className="actions"><a className="button white" href={site.apk}>Download APK ↗</a><a className="button outline-white" href={site.github} target="_blank" rel="noreferrer">View GitHub ↗</a></div></div>
           <div className="qr-card"><QR value={site.siteUrl} /><strong>Scan to open MEMORY</strong></div>
         </div>
       </section>
 
-      <footer className="footer shell"><div><a className="brand" href="#top">MEMORY<span>•</span></a><p>Never lose the context again.</p></div><div className="footer-links"><a href={site.github} target="_blank" rel="noreferrer">GitHub ↗</a><a href={site.demo} target="_blank" rel="noreferrer">Demo ↗</a><a href={"https://www.figma.com/design/k2kha7pcW4v4H0oaaDgQSY/Memory-workboard?node-id=0-1&t=QNL5gsPfSPBe9ePp-1"} target="_blank" rel="noreferrer">Prototype ↗</a></div><small>Built for Android · Privacy-first · On-device AI</small></footer>
+      <footer className="footer shell"><div><a className="brand" href="#top">MEMORY<span>•</span></a><p>Never lose the context again.</p></div><div className="footer-links"><a href={site.github} target="_blank" rel="noreferrer">GitHub ↗</a><a href={site.demo} target="_blank" rel="noreferrer">Demo ↗</a><a href={site.figma} target="_blank" rel="noreferrer">Prototype ↗</a></div><small>Built for Android · Privacy-first · On-device AI</small></footer>
     </main>
   );
 }
