@@ -210,6 +210,7 @@ fun CaptureScreen(
     viewModel: CaptureViewModel,
     onNavigateToTimeline: () -> Unit,
     onNavigateToSearch: () -> Unit,
+    onNavigateBack: () -> Unit = {},
     triggerCaptureFlow: kotlinx.coroutines.flow.SharedFlow<Unit> = kotlinx.coroutines.flow.MutableSharedFlow(),
     modifier: Modifier = Modifier
 ) {
@@ -250,7 +251,7 @@ fun CaptureScreen(
             TopAppBar(
                 title = { },
                 navigationIcon = {
-                    IconButton(onClick = { /* TODO close */ }) {
+                    IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Filled.Close, "Close")
                     }
                 },

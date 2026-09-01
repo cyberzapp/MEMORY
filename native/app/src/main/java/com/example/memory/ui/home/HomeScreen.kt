@@ -119,7 +119,7 @@ fun HomeScreen(
                         )
                         QuickActionCard(
                             icon = Icons.Filled.Search,
-                            label = "Ask Memory",
+                            label = "Search",
                             onClick = onNavigateToSearch,
                             modifier = Modifier.weight(1f)
                         )

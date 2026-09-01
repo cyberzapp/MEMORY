@@ -54,6 +54,7 @@ fun MainNavigation(triggerCaptureFlow: SharedFlow<Unit> = MutableSharedFlow()) {
                     triggerCaptureFlow = triggerCaptureFlow,
                     onNavigateToTimeline = { backStack.add(TimelineRoute) },
                     onNavigateToSearch = { backStack.add(SearchRoute) },
+                    onNavigateBack = { backStack.removeLastOrNull() },
                     modifier = Modifier.safeDrawingPadding()
                 )
             }

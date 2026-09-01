@@ -47,7 +47,12 @@ data class EvidenceBundle(
             "Neck", "Wrist", "Elbow", "Knee", "Gesture",
             "Pattern", "Rectangle", "Triangle", "Circle", "Line",
             "Font", "Tints and shades", "Material property", "Symmetry",
-            "Electric blue", "Magenta", "Terrestrial plant"
+            "Electric blue", "Magenta", "Terrestrial plant",
+            // ML Kit frequently confuses these — MediaPipe handles them correctly
+            "Musical instrument", "Keyboard instrument", "Musical keyboard",
+            "Electronic instrument", "String instrument",
+            "Input device", "Computer hardware", "Peripheral",
+            "Office equipment", "Output device", "Gadget"
         )
 
         fun isUsefulLabel(label: String): Boolean = label !in NOISE_LABELS
@@ -116,17 +121,20 @@ data class EvidenceBundle(
      */
     fun fallbackSummary(): String {
         return buildString {
-            // Filter out noise labels (body parts, textures, shapes)
-            val usefulLabels = imageLabels.filter { isUsefulLabel(it.text) }
-            // Prioritize Image Labels (400+ categories) over Object Detection (only 5 categories)
-            if (usefulLabels.isNotEmpty()) {
-                append(usefulLabels.take(4).joinToString(", ") { it.text })
-            }
-            // Add specific object detection labels only if they add info
+            // Prioritize MediaPipe objects (80+ specific COCO labels — highly accurate)
             val meaningfulObjects = objects.filter { it.label != "Object" }
             if (meaningfulObjects.isNotEmpty()) {
-                if (isNotEmpty()) append(" — ")
                 append(meaningfulObjects.joinToString(", ") { it.label })
+            }
+            // Add ML Kit Image Labels only if they don't conflict with detected objects
+            val usefulLabels = imageLabels.filter { isUsefulLabel(it.text) }
+            val objectLabelNames = meaningfulObjects.map { it.label.lowercase() }.toSet()
+            val nonConflictingLabels = usefulLabels.filter { label ->
+                label.text.lowercase() !in objectLabelNames
+            }
+            if (nonConflictingLabels.isNotEmpty()) {
+                if (isNotEmpty()) append(" — ")
+                append(nonConflictingLabels.take(3).joinToString(", ") { it.text })
             }
             if (!ocrText.isNullOrBlank()) {
                 if (isNotEmpty()) append(" | ")
