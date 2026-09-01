@@ -13,6 +13,7 @@ import com.google.mlkit.vision.label.defaults.ImageLabelerOptions
 import com.example.memory.ml.DetectedObjectInfo
 import com.example.memory.ml.OcrBlock
 import com.example.memory.ml.ImageLabelInfo
+import com.example.memory.ml.vision.MediaPipeAnalyzer
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.tasks.await
@@ -42,6 +43,8 @@ class ImageAnalyzer(context: Context) {
         private const val TAG = "ImageAnalyzer"
     }
 
+    private val mediaPipeAnalyzer = MediaPipeAnalyzer(context)
+
     private val textRecognizer: TextRecognizer =
         TextRecognition.getClient(TextRecognizerOptions.Builder().build())
 
@@ -63,17 +66,19 @@ class ImageAnalyzer(context: Context) {
         val inputImage = InputImage.fromBitmap(bitmap, 0)
 
         // Run in parallel
+        val objectsDeferred = async { mediaPipeAnalyzer.detectObjects(bitmap) }
         val ocrDeferred = async { runTextRecognition(inputImage) }
         val labelsDeferred = async { runImageLabeling(inputImage) }
 
+        val objectsResult = objectsDeferred.await()
         val ocrResult = ocrDeferred.await()
         val labelsResult = labelsDeferred.await()
 
-        Log.i(TAG, "Analysis complete: ${labelsResult.size} labels, OCR=${ocrResult.fullText?.take(50)}")
+        Log.i(TAG, "Analysis complete: ${objectsResult.size} objects, ${labelsResult.size} labels, OCR=${ocrResult.fullText?.take(50)}")
         Log.i(TAG, "Labels: ${labelsResult.map { "${it.text}(${(it.confidence * 100).toInt()}%)" }}")
 
         VisionResult(
-            detectedObjects = emptyList(), // Removed base ObjectDetector as it only has 5 generic categories
+            detectedObjects = objectsResult,
             ocrText = ocrResult.fullText,
             ocrBlocks = ocrResult.blocks,
             imageLabels = labelsResult
@@ -121,6 +126,7 @@ class ImageAnalyzer(context: Context) {
     fun close() {
         textRecognizer.close()
         imageLabeler.close()
+        mediaPipeAnalyzer.close()
     }
 }
 

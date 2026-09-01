@@ -123,18 +123,18 @@ export default function Home() {
         <div className="split-head"><h2>We aren't starting<br /><em>from zero.</em></h2><p>The risky part—the core capture, understanding and recall loop—is already working. The next 30 hours make it fast, effortless and device-optimized.</p></div>
         <div className="roadmap">
           <article className="done"><span>NOW</span><h3>Core memory loop</h3><p>Capture → understand → remember → recall</p><b>✓ WORKING MVP</b></article>
-          {["0–6 HRS|Make capture instant|One-tap photo and voice capture.","6–12 HRS|Bring memories back|Scheduled reminders and notifications.","12–18 HRS|Add more context|Time, location and a simple memory timeline.","18–24 HRS|Make it hands-free|Android Assistant / App Actions.","24–30 HRS|Make it fast on iQOO|RAM, latency, thermals and local AI benchmarking."].map(item => { const [time,title,text]=item.split("|"); return <article key={time}><span>{time}</span><h3>{title}</h3><p>{text}</p></article> })}
+          {["0–6 HRS|Make capture instant|One-tap photo and voice capture.", "6–12 HRS|Bring memories back|Scheduled reminders and notifications.", "12–18 HRS|Add more context|Time, location and a simple memory timeline.", "18–24 HRS|Make it hands-free|Android Assistant / App Actions.", "24–30 HRS|Make it fast on iQOO|RAM, latency, thermals and local AI benchmarking."].map(item => { const [time, title, text] = item.split("|"); return <article key={time}><span>{time}</span><h3>{title}</h3><p>{text}</p></article> })}
         </div>
       </section>
 
       <section id="try" className="section try-section">
         <div className="shell try-layout">
-          <div><p className="eyebrow">TRY THE MVP</p><h2>Capture once.<br /><em>Remember later.</em></h2><p>Watch the short demo or install the Android build to experience the current MVP.</p><div className="actions"><a className="button white" href={site.apk}>Download APK ↗</a><a className="button outline-white" href={site.github} target="_blank" rel="noreferrer">View GitHub ↗</a></div></div>
-          <div className="qr-card"><QR value={site.siteUrl} /><strong>Scan to open MEMORY</strong><small>Keep this QR on your submission deck.</small></div>
+          <div><p className="eyebrow">TRY THE MVP</p><h2>Capture once.<br /><em>Remember later.</em></h2><p>Watch the short demo or install the Android build to experience the current MVP.</p><div className="actions"><a className="button white" href={site.apk}>Download APK ↗</a><a className="button outline-white" href={"https://github.com/cyberzapp/MEMORY"} target="_blank" rel="noreferrer">View GitHub ↗</a></div></div>
+          <div className="qr-card"><QR value={site.siteUrl} /><strong>Scan to open MEMORY</strong></div>
         </div>
       </section>
 
-      <footer className="footer shell"><div><a className="brand" href="#top">MEMORY<span>•</span></a><p>Never lose the context again.</p></div><div className="footer-links"><a href={site.github} target="_blank" rel="noreferrer">GitHub ↗</a><a href={site.demo} target="_blank" rel="noreferrer">Demo ↗</a><a href={site.figma} target="_blank" rel="noreferrer">Prototype ↗</a></div><small>Built for Android · Privacy-first · On-device AI</small></footer>
+      <footer className="footer shell"><div><a className="brand" href="#top">MEMORY<span>•</span></a><p>Never lose the context again.</p></div><div className="footer-links"><a href={site.github} target="_blank" rel="noreferrer">GitHub ↗</a><a href={site.demo} target="_blank" rel="noreferrer">Demo ↗</a><a href={"https://www.figma.com/design/k2kha7pcW4v4H0oaaDgQSY/Memory-workboard?node-id=0-1&t=QNL5gsPfSPBe9ePp-1"} target="_blank" rel="noreferrer">Prototype ↗</a></div><small>Built for Android · Privacy-first · On-device AI</small></footer>
     </main>
   );
 }

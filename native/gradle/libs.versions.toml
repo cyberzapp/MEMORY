@@ -24,6 +24,8 @@ mlkitVisionCommon = "17.3.0"
 litert = "2.2.0"
 litertlm = "0.16.1"
 tflite = "2.16.1"
+mediapipeTasksVision = "0.10.14"
+dataStore = "1.1.1"
 workManager = "2.10.0"
 playServicesLocation = "21.3.0"
 hilt = "2.56.2"
@@ -75,6 +77,12 @@ mlkit-image-labeling = { module = "com.google.mlkit:image-labeling", version.ref
 
 # LiteRT (embedding model)
 litert = { module = "com.google.ai.edge.litert:litert", version.ref = "litert" }
+
+# DataStore
+androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "dataStore" }
+
+# MediaPipe Tasks
+mediapipe-tasks-vision = { module = "com.google.mediapipe:tasks-vision", version.ref = "mediapipeTasksVision" }
 
 # LiteRT-LM (Gemma)
 litertlm-android = { module = "com.google.ai.edge.litertlm:litertlm-android", version.ref = "litertlm" }

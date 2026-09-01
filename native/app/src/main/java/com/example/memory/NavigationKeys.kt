@@ -21,3 +21,15 @@ data class MemoryDetailRoute(val memoryId: String) : NavKey
 
 @Serializable
 data object SettingsRoute : NavKey
+
+@Serializable
+data object SplashRoute : NavKey
+
+@Serializable
+data object OnboardingRoute : NavKey
+
+@Serializable
+data object HomeRoute : NavKey
+
+@Serializable
+data object RemindersRoute : NavKey

@@ -85,6 +85,9 @@ interface MemoryDao {
     @Query("SELECT * FROM reminders WHERE isCompleted = 0 ORDER BY triggerAt ASC")
     fun getActiveReminders(): Flow<List<ReminderEntity>>
 
+    @Query("SELECT * FROM reminders ORDER BY triggerAt DESC")
+    fun getAllReminders(): Flow<List<ReminderEntity>>
+
     @Query("SELECT * FROM reminders WHERE memoryId = :memoryId")
     suspend fun getRemindersForMemory(memoryId: String): List<ReminderEntity>
 

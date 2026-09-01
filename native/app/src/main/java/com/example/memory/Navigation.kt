@@ -1,11 +1,11 @@
 package com.example.memory
 
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -21,13 +21,19 @@ import com.example.memory.ui.timeline.TimelineViewModel
 import com.example.memory.ui.detail.MemoryDetailScreen
 import com.example.memory.ui.detail.MemoryDetailViewModel
 import com.example.memory.ui.settings.SettingsScreen
+import com.example.memory.ui.splash.SplashScreen
+import com.example.memory.ui.onboarding.OnboardingScreen
+import com.example.memory.ui.home.HomeScreen
+import com.example.memory.ui.home.HomeViewModel
+import com.example.memory.ui.reminders.RemindersScreen
 
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.launch
 
 @Composable
 fun MainNavigation(triggerCaptureFlow: SharedFlow<Unit> = MutableSharedFlow()) {
-    val backStack = rememberNavBackStack(CaptureRoute)
+    val backStack = rememberNavBackStack(SplashRoute)
     val context = LocalContext.current
     val appContainer = (context.applicationContext as MemoryApplication).container
 
@@ -89,7 +95,7 @@ fun MainNavigation(triggerCaptureFlow: SharedFlow<Unit> = MutableSharedFlow()) {
                     modifier = Modifier.safeDrawingPadding()
                 )
             }
-            
+
             entry<MemoryDetailRoute> { route ->
                 val viewModel: MemoryDetailViewModel = viewModel(
                     key = "detail_${route.memoryId}",
@@ -105,9 +111,75 @@ fun MainNavigation(triggerCaptureFlow: SharedFlow<Unit> = MutableSharedFlow()) {
                     modifier = Modifier.safeDrawingPadding()
                 )
             }
-            
+
             entry<SettingsRoute> {
                 SettingsScreen(
+                    onNavigateBack = { backStack.removeLastOrNull() }
+                )
+            }
+
+            entry<SplashRoute> {
+                SplashScreen(
+                    userPreferencesRepository = appContainer.userPreferencesRepository,
+                    onNavigateToHome = {
+                        backStack.clear()
+                        backStack.add(HomeRoute)
+                    },
+                    onNavigateToOnboarding = {
+                        backStack.clear()
+                        backStack.add(OnboardingRoute)
+                    }
+                )
+            }
+
+            entry<OnboardingRoute> {
+                val scope = androidx.compose.runtime.rememberCoroutineScope()
+                OnboardingScreen(
+                    onComplete = { name ->
+                        scope.launch {
+                            appContainer.userPreferencesRepository.setUserName(name)
+                            appContainer.userPreferencesRepository.setOnboardingComplete(true)
+                            backStack.clear()
+                            backStack.add(HomeRoute)
+                        }
+                    }
+                )
+            }
+
+            entry<HomeRoute> {
+                val homeViewModel: HomeViewModel = viewModel(
+                    factory = object : ViewModelProvider.Factory {
+                        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                            return HomeViewModel(context.applicationContext as android.app.Application) as T
+                        }
+                    }
+                )
+                val uiState by homeViewModel.uiState.collectAsState()
+                HomeScreen(
+                    userName = uiState.userName,
+                    recentMemories = uiState.recentMemories,
+                    totalMemoryCount = uiState.totalMemoryCount,
+                    onNavigateToCapture = { backStack.add(CaptureRoute) },
+                    onNavigateToSearch = { backStack.add(SearchRoute) },
+                    onNavigateToTimeline = { backStack.add(TimelineRoute) },
+                    onNavigateToSettings = { backStack.add(SettingsRoute) },
+                    onNavigateToReminders = { backStack.add(RemindersRoute) },
+                    onMemoryClick = { memoryId ->
+                        backStack.add(MemoryDetailRoute(memoryId))
+                    }
+                )
+            }
+
+            entry<RemindersRoute> {
+                val allReminders by appContainer.memoryRepository.allReminders.collectAsState(initial = emptyList())
+                val scope = androidx.compose.runtime.rememberCoroutineScope()
+                RemindersScreen(
+                    reminders = allReminders,
+                    onCancelReminder = { id ->
+                        scope.launch {
+                            appContainer.memoryRepository.cancelReminder(id)
+                        }
+                    },
                     onNavigateBack = { backStack.removeLastOrNull() }
                 )
             }

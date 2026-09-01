@@ -42,6 +42,7 @@ class MemoryRepository(
     val allMemories: Flow<List<MemoryEntity>> = dao.getAllMemories()
     val processedMemories: Flow<List<MemoryEntity>> = dao.getProcessedMemories()
     val activeReminders: Flow<List<ReminderEntity>> = dao.getActiveReminders()
+    val allReminders: Flow<List<ReminderEntity>> = dao.getAllReminders()
 
     // === Memory CRUD ===
 

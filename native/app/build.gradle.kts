@@ -100,11 +100,13 @@ dependencies {
   implementation(libs.androidx.camera.lifecycle)
   implementation(libs.androidx.camera.view)
 
-  // ML Kit Vision
+  // ML Kit Vision (Keep OCR and Image Labeling for extra context)
   implementation(libs.mlkit.vision.common)
   implementation(libs.mlkit.text.recognition)
-  implementation(libs.mlkit.objectdetection)
   implementation(libs.mlkit.image.labeling)
+
+  // MediaPipe (Replacing ML Kit Object Detection)
+  implementation(libs.mediapipe.tasks.vision)
 
   // LiteRT — Embedding Model (all-MiniLM-L6-v2 INT8) (Using classic TFLite interpreter)
   implementation(libs.org.tensorflow.lite)
@@ -114,6 +116,9 @@ dependencies {
 
   // WorkManager
   implementation(libs.androidx.work.runtime.ktx)
+
+  // DataStore
+  implementation(libs.androidx.datastore.preferences)
 
   // Location
   implementation(libs.play.services.location)

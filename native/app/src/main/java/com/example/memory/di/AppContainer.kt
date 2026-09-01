@@ -38,6 +38,8 @@ class AppContainer(private val context: Context) {
     
     val modelLifecycleManager by lazy { ModelLifecycleManager(context) }
     
+    val userPreferencesRepository by lazy { com.example.memory.data.repository.UserPreferencesRepository(context) }
+    
     val memoryRepository by lazy { 
         MemoryRepository(
             memoryDao,
