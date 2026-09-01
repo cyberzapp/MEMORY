@@ -1,5 +1,6 @@
 import { site } from "@/lib/site";
 import QR from "@/components/QR";
+import { Camera, Mic, Eye, Brain, Search, ArrowRight } from "lucide-react";
 
 const steps = [
   ["01", "Capture", "Take a quick photo or record a short voice note."],
@@ -43,22 +44,13 @@ export default function Home() {
           <p className="hero-text">{site.description}</p>
           <div className="actions">
             <a className="button dark" href="#mvp">See the working MVP <span>↓</span></a>
-            <a className="button light" href={site.demo} target="_blank" rel="noreferrer">Watch 60-sec demo <span>↗</span></a>
+            {/* <a className="button light" href={site.demo} target="_blank" rel="noreferrer">Watch 60-sec demo <span>↗</span></a> */}
           </div>
           <div className="trust-row"><span>PHOTO</span><i /> <span>VOICE</span><i /> <span>LOCAL AI</span><i /> <span>LOCAL MEMORY</span></div>
         </div>
 
         <div className="hero-device" aria-label="MEMORY product preview">
-          <div className="phone">
-            <div className="phone-top"><span>9:04</span><span>● ● ●</span></div>
-            <div className="app-mini">
-              <div className="mini-title"><span>MEMORY</span><span className="dot">●</span></div>
-              <div className="mini-question">Where did I put my charger?</div>
-              <div className="mini-answer"><span className="mini-icon">⌁</span><div><strong>Second drawer</strong><small>Study desk · 9:04 AM</small></div></div>
-              <div className="mini-evidence"><div className="desk-art"><span>CHARGER</span><span>LAPTOP</span></div><small>Captured moment</small></div>
-              <div className="mini-bottom"><span>+ Remember this</span><span>⌕</span></div>
-            </div>
-          </div>
+          <img src="/screens/Home-screen.png" alt="Home Screen" className="phone-screen-image" />
           <div className="float-card card-a"><span>CAPTURED</span><strong>Laptop + charger</strong><small>09:04 AM</small></div>
           <div className="float-card card-b"><span>LOCAL</span><strong>No cloud required</strong><small>for the core memory loop</small></div>
         </div>
@@ -86,11 +78,11 @@ export default function Home() {
       </section>
 
       <section id="mvp" className="section shell">
-        <div className="section-top"><div><p className="eyebrow">WORKING MVP</p><h2>The core memory loop<br />already works.</h2></div><a className="text-link" href={site.demo} target="_blank" rel="noreferrer">Watch the demo ↗</a></div>
+        <div className="section-top"><div><p className="eyebrow">WORKING MVP</p><h2>The core memory loop<br />already works.</h2></div>{/* <a className="text-link" href={site.demo} target="_blank" rel="noreferrer">Watch the demo ↗</a> */}</div>
         <div className="mvp-grid">
-          <div className="mvp-card"><div className="fake-screen capture-screen"><span className="screen-label">MEMORY</span><div className="capture-circle">⌾</div><strong>Capture a memory</strong><small>Photo or voice</small></div><div className="card-caption"><span>01</span><div><b>CAPTURE</b><p>Save a moment intentionally.</p></div></div></div>
-          <div className="mvp-card"><div className="fake-screen understand-screen"><span className="screen-label">UNDERSTANDING</span><div className="scan-box"><span>LAPTOP</span><span>CHARGER</span><span>DESK</span></div><strong>Useful context extracted</strong><small>Processed on the device</small></div><div className="card-caption"><span>02</span><div><b>UNDERSTAND</b><p>Find what matters in the capture.</p></div></div></div>
-          <div className="mvp-card"><div className="fake-screen recall-screen"><span className="screen-label">ASK MEMORY</span><div className="query">Where did I put my charger?</div><div className="result"><b>Second drawer</b><small>Study desk · 9:04 AM</small></div><strong>Found in your local memory</strong></div><div className="card-caption"><span>03</span><div><b>RECALL</b><p>Ask naturally when you need it.</p></div></div></div>
+          <div className="mvp-card"><img src="/screens/CAPTURE.png" alt="Capture a memory" className="mvp-screenshot" /><div className="card-caption"><span>01</span><div><b>CAPTURE</b><p>Save a moment intentionally.</p></div></div></div>
+          <div className="mvp-card"><img src="/screens/UNDERSTAND.png" alt="Useful context extracted" className="mvp-screenshot" /><div className="card-caption"><span>02</span><div><b>UNDERSTAND</b><p>Find what matters in the capture.</p></div></div></div>
+          <div className="mvp-card"><img src="/screens/RECALL.png" alt="Ask naturally when you need it" className="mvp-screenshot" /><div className="card-caption"><span>03</span><div><b>RECALL</b><p>Ask naturally when you need it.</p></div></div></div>
         </div>
         <div className="built-strip"><strong>BUILT NOW</strong><span>Photo capture</span><i /> <span>Voice capture</span><i /> <span>AI extraction</span><i /> <span>Local memory</span><i /> <span>Semantic recall</span></div>
       </section>
@@ -107,7 +99,7 @@ export default function Home() {
         <p className="eyebrow">ON-DEVICE AI</p>
         <div className="split-head"><h2>A local pipeline,<br /><em>not one giant model.</em></h2><p>Specialized models handle the cheap, repeatable work. A small local language model is used when the system actually needs reasoning.</p></div>
         <div className="model-grid">{models.map(([label, model, text]) => <article key={label}><span>{label}</span><h3>{model}</h3><p>{text}</p></article>)}</div>
-        <div className="pipeline"><div>📷 / 🎙️<b>Capture</b></div><i>→</i><div>👁<b>Understand</b></div><i>→</i><div>🧠<b>Create memory</b></div><i>→</i><div>⌕<b>Recall locally</b></div></div>
+        <div className="pipeline"><div><Camera size={20}/><Mic size={20}/><b>Capture</b></div><i><ArrowRight size={16}/></i><div><Eye size={20}/><b>Understand</b></div><i><ArrowRight size={16}/></i><div><Brain size={20}/><b>Create memory</b></div><i><ArrowRight size={16}/></i><div><Search size={20}/><b>Recall locally</b></div></div>
         <p className="tech-note"><b>No cloud required for the core memory loop.</b> The exact runtime footprint and acceleration path are validated on real Android hardware.</p>
       </section>
 

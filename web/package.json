@@ -9,10 +9,11 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "lucide-react": "^1.39.0",
     "next": "latest",
+    "qrcode.react": "latest",
     "react": "latest",
-    "react-dom": "latest",
-    "qrcode.react": "latest"
+    "react-dom": "latest"
   },
   "devDependencies": {
     "@types/node": "latest",
