@@ -13,7 +13,7 @@ The core memory pipeline is designed to run locally on the Android device, minim
 ---
 
 ## 🚀 Quick Links
-* 🌐 **Website / Demo**: [MEMORY Website](https://your-website-url.com) *(Update with your live URL)*
+* 🌐 **Website / Demo**: [MEMORY Website](https://memory.breathy.in)
 * 📥 **Download APK**: [Latest Release (v1.0)](https://github.com/cyberzapp/MEMORY/releases/latest)
 * 🎨 **Figma Prototype**: [View Design](https://www.figma.com/design/k2kha7pcW4v4H0oaaDgQSY/Memory-workboard?node-id=0-1&t=QNL5gsPfSPBe9ePp-1)
 
